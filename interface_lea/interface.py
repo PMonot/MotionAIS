@@ -18,14 +18,9 @@ import csv
 import math
 import time
 import copy
-import open3d as o3d
 import numpy as np
 import warnings
-from numpy import linalg
 import matplotlib.pyplot as plt
-from matplotlib import colormaps as cm
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from matplotlib.colors import ListedColormap
 from scipy.interpolate import splev, splrep
 from scipy.ndimage import gaussian_filter1d, median_filter
 
@@ -54,16 +49,12 @@ class MyApp(Widget):
         timer_debut_im = time.process_time_ns()
         
         # flag pour savoir quelles infos sont disponibles
-        global analyse_eff
-        analyse_eff = False
         global detection_eff
         detection_eff = False
         global coordo_xyz
         coordo_xyz = False
         global labelize_extent
         labelize_extent = False
-        global markers_rotated
-        markers_rotated = False
 
         # Initie la variable pour numéro de l'image affichée à 1 pour voir la première image
         global image_nb
@@ -77,15 +68,12 @@ class MyApp(Widget):
         save_path_xyz = path+'/xyz_images/'
         global save_path_im
         save_path_im = path+'/Preprocessed/'
-        global save_path_depth
-        save_path_depth = path+'/depth/'
 
         try: # si chemin entré valide
             # Crée les répertoires pour images converties et prétraitées
             os.makedirs(save_path, exist_ok=True)
             os.makedirs(save_path_xyz, exist_ok=True)
             os.makedirs(save_path_im, exist_ok=True)
-            os.makedirs(save_path_depth, exist_ok = True)
 
             # lit les fichiers .raw si pas déjà fait et crée les images
             if len(os.listdir(save_path)) == 0:
@@ -180,11 +168,8 @@ class MyApp(Widget):
         body_LR = np.argwhere(z_nobg[1250,:]) #identifie points n'appartenant pas au bg, donc au corps du patient
         body_HL = np.argwhere(z_nobg[:,600])
 
-        print(body_LR[0])
-
-        left = int(body_LR[0])
-        print(left)
-        right = int(body_LR[-1])
+        left = int(body_LR[0,0])
+        right = int(body_LR[-1,0])
 
         global w1
         global w2
@@ -195,17 +180,17 @@ class MyApp(Widget):
             print('BG')
             w1 = np.max(left-100, 0)
             w2 = right+50
-            h1 = int(body_HL[0])+100
+            h1 = int(body_HL[0,0])+100
         elif 'BD' in os.listdir(save_path_xyz)[0]:
             print('BD')
             w1 = left-50
             w2 = right+100
-            h1 = int(body_HL[0])+100
+            h1 = int(body_HL[0,0])+100
         else:
             print('other')
             w1 = np.max(left-50, 0)
             w2 = right+50
-            h1 = int(body_HL[0])-100
+            h1 = int(body_HL[0,0])-100
 
         h2 = h1+int(6/5*(w2-w1))+150
         print(w1, w2, h1, h2)
@@ -269,10 +254,7 @@ class MyApp(Widget):
         self.ids.image_nb_input.text = f'{image_nb}'
         self.ids.image_show.clear_widgets()
 
-        if self.ids.button_profondeur.state == 'normal':
-            self.ids.image_show.source = os.path.join(save_path_im, sorted(os.listdir(save_path_im))[image_nb-1])
-        if self.ids.button_profondeur.state == 'down':
-            self.ids.image_show.source = os.path.join(save_path_depth, sorted(os.listdir(save_path_depth))[image_nb-1])
+        self.ids.image_show.source = os.path.join(save_path_im, sorted(os.listdir(save_path_im))[image_nb-1])
 
         self.canvas.remove_group(u"circle") # efface les cercles verts des marqueurs
         self.ids.rep_continuity.text = ''
@@ -280,10 +262,6 @@ class MyApp(Widget):
         # Affiche les marqueurs si bouton activé
         if self.ids.button_showmarks.state == 'down':
             self.show_marqueurs()
-        if self.ids.button_distances.state == 'down':
-            self.remove_widget(self.Distances)
-            self.show_marqueurs_gold()
-            self.show_distances()
             
         # Affiche les numéros d'images n'ayant pas le bon nb de marqueurs si bouton activé
         if self.ids.button_verif_nb.state == 'down':
@@ -346,7 +324,7 @@ class MyApp(Widget):
         timer_debut_detection = time.process_time_ns()
         if not os.path.exists(os.path.join(path,"annotated_frames","annotated_frame_0000.jpg")):
             warnings.warn("La première frame doit être annotée manuellement et enregistrée")
-            pass
+            return
 
         global detection_eff
         if len(path) > 1:
@@ -416,9 +394,6 @@ class MyApp(Widget):
         # Efface les marqueurs si bouton désactivé
         if self.ids.button_showmarks.state == 'normal':
             self.canvas.remove_group(u"circle")
-        
-        if self.ids.button_distances.state == 'down':
-            self.canvas.remove_group(u"circle_gold")
 
     # Fonction pour vérifier le nombre de marqueurs détectés pour toutes les images du répertoire
     # (avec dictionnaire de coordonnées créé)
@@ -460,6 +435,9 @@ class MyApp(Widget):
    
     # Fonction pour convertir la position touchée en coordonnées de marqueur, puis choisir l'action à exécuter (delete or add)
     def pos_marqueur(self, touch_pos):
+        if not path:
+            warnings.warn("Aucune image détectée, merci de selectionner un dossier pour commencer")
+            return
         if self.ids.labelize_manual.state == 'normal':
             m_pos = [0,0]
             # im_dim = (600, 500, 3) = (height, width, channels)
@@ -762,8 +740,7 @@ class MyApp(Widget):
         self.ids.button_verif_continuity.disabled = False
         self.ids.button_graph_continuity.disabled = False
         self.ids.button_delete.disabled = False
-        self.ids.button_interpolate.disabled = False
-        self.ids.button_analyze.disabled = False               
+        self.ids.button_interpolate.disabled = False         
                         
     # Fonction pour extraire les coordonnées (x,y,z) des marqueurs des fichiers _xyz_.raw
     def coordo_xyz_marqueurs(self):
@@ -825,6 +802,9 @@ class MyApp(Widget):
                 annotated_file = f"annotated_frame_{i:04d}.jpg"
                 frame_with_key_points = cv2.drawKeypoints(preprocessed_frame, key_points, None, color=(0, 255, 0))
                 cv2.imwrite(os.path.join(annotated_frames_path, annotated_file), frame_with_key_points)
+        
+        if os.path.exists(os.path.join(path,"annotated_frames","annotated_frame_0000.jpg")):
+            self.ids.button_particle_filter.disabled = False
 
         
 class Interface(App):
