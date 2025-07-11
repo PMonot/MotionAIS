@@ -323,9 +323,6 @@ class MyApp(Widget):
             self.ids.grid.add_widget(Label(text='Coordonnées (x,y,z)', color=(0,0,0,1)))
             d_im = dict_coordo_xyz_labels[f'image{image_nb}']
 
-            if markers_rotated:
-                d_im = dict_coordo_xyz_labels_r[f'image{image_nb}'] # affiche les coordonnées après rotation si effectuée
-
             for key, l in zip(d_im.keys(), labels):
                 self.ids.grid.add_widget(Label(text=f'{l}', color=(0,0,0,1)))
                 if l in dict_coordo_labels_manual[f'image{image_nb}']:
@@ -371,41 +368,34 @@ class MyApp(Widget):
             global labelize_extent
             labelize_extent = True
 
-            # if 'coordonnees_xyz.csv' in os.listdir(path+'/Positions/'):
-            # # Recrée le dictionnaire de coordonnées x,y,z
-            #     global dict_coordo_xyz_labels
-            #     dict_coordo_xyz_labels = {}
-            #     with open(path+'/Positions/coordonnees_xyz.csv', 'r') as csvfile:
-            #         reader = csv.reader(csvfile, delimiter=';')
-            #         j = 0
-            #         for row in reader: #skip headline
-            #             if j == 0:
-            #                 entete = row[1::3]
-            #                 labels_xyz = [e[:-2] for e in entete]
-            #                 print(labels_xyz)
-            #             elif j > 0:
-            #                 key = f'image{row[0]}'
-            #                 dict_coordo_xyz_labels.update({key: {}})
-            #                 row = [float(i) for i in row[1:]]
-            #                 i = 0
-            #                 for l in labels_xyz:
-            #                     dict_coordo_xyz_labels[key].update({l : [row[i], row[i+1], row[i+2]]})
-            #                     i += 3
-            #             j += 1
+            if 'coordonnees_xyz.csv' in os.listdir(path+'/Positions/'):
+            # Recrée le dictionnaire de coordonnées x,y,z
+                global dict_coordo_xyz_labels
+                dict_coordo_xyz_labels = {}
+                with open(path+'/Positions/coordonnees_xyz.csv', 'r') as csvfile:
+                    reader = csv.reader(csvfile, delimiter=';')
+                    j = 0
+                    for row in reader: #skip headline
+                        if j == 0:
+                            entete = row[1::3]
+                            labels_xyz = [e[:-2] for e in entete]
+                            print(labels_xyz)
+                        elif j > 0:
+                            key = f'image{row[0]}'
+                            dict_coordo_xyz_labels.update({key: {}})
+                            row = [float(i) for i in row[1:]]
+                            i = 0
+                            for l in labels_xyz:
+                                dict_coordo_xyz_labels[key].update({l : [row[i], row[i+1], row[i+2]]})
+                                i += 3
+                        j += 1
 
-            #     global coordo_xyz
-            #     coordo_xyz = True
+                global coordo_xyz
+                coordo_xyz = True
 
-            # else:
-            #     self.coordo_xyz_marqueurs()
+            else:
+                self.coordo_xyz_marqueurs()
             
-            # self.ids.button_analyze.state = 'down'
-            # self.analyse()
-            # global analyse_eff
-            # analyse_eff = True
-            
-            # self.ids.button_analyze.state = 'down'
-            # self.ids.button_analyze.disabled = False
 
         timer_fin_detection = time.process_time_ns()
         print(timer_debut_detection, timer_fin_detection)
@@ -799,476 +789,17 @@ class MyApp(Widget):
 
         global coordo_xyz
         coordo_xyz = True
-    
-    """ # Fonction de labelisation par tri (avec 8 marqueurs uniquement, selon coordonnées x,y,z)
-    # Utilisée pour l'analyse
-    
-    def labelize_8(self):
-        global dict_coordo_xyz_labels
-        dict_coordo_xyz_labels = {}
-        for im, coordos in dict_coordo_xyz.items():
-            coordos_sorted_y = sorted(coordos, key=lambda tup: tup[1])
-            dict_coordo_xyz_labels.update({im: {'C': coordos_sorted_y[-1]}}) #plus petite valeur en y = C7
-            dict_coordo_xyz_labels[im].update({'T1': coordos_sorted_y[-2]})
-            dict_coordo_xyz_labels[im].update({'L': coordos_sorted_y[2]})
-            epines = coordos_sorted_y[0:2]
-            epines = sorted(epines, key=lambda tup: tup[0])
-            dict_coordo_xyz_labels[im].update({'IG': epines[0]})
-            dict_coordo_xyz_labels[im].update({'ID': epines[1]})
-            del coordos_sorted_y[0:3]
-            del coordos_sorted_y[-2:]
-            coordos_sorted_x = sorted(coordos_sorted_y, key=lambda tup: tup[0])
-            dict_coordo_xyz_labels[im].update({'D': coordos_sorted_x[-1]}) #plus grande valeur en x = droite
-            dict_coordo_xyz_labels[im].update({'G': coordos_sorted_x[0]})
-            dict_coordo_xyz_labels[im].update({'T2': coordos_sorted_x[1]}) """
-
-    def analyse(self):
-
-        self.ids.save_positions.state = 'down'
-        self.to_save()
-
-        global dict_metriques
-
-        timer_debut_analyse = time.process_time_ns()
-        im_prob_nb = self.verif_nb()
-        if len(im_prob_nb) == 0:
-            global analyse_eff
-            analyse_eff = True
-            if self.ids.check_new.state == 'down' or 'coordonnees_xyz.csv' not in os.listdir(path+'/Positions/'):
-                self.coordo_xyz_marqueurs()
-
-            self.rotate_markers()
-
-            if self.ids.button_analyze.state == 'down':
-                self.coordo_xyz_marqueurs()
-
-                dict_metriques = {'angle_scap_vert' : [], 'angle_scap_prof': [], 'diff_dg': []
-                                #   , 'bsr': []
-                                }
-
-                for im, coordo in dict_coordo_xyz_labels_r.items():
-                    scap_y = np.degrees(np.arctan((coordo['ScD'][1] - coordo['ScG'][1])/(coordo['ScD'][0] - coordo['ScG'][0])))
-                    dict_metriques['angle_scap_vert'].append(scap_y)
-                    scap_z = np.degrees(np.arctan((coordo['ScD'][2] - coordo['ScG'][2])/(coordo['ScD'][0] - coordo['ScG'][0]))) #ajouter avec z
-                    dict_metriques['angle_scap_prof'].append(scap_z)
-
-                    # calcul distance horizontale entre marqueurs D/G et l'axe du rachis (x=ay+b)
-                    if 'Linf' in coordo.keys():
-                        a = (coordo['Linf'][0]-coordo['C7'][0])/(coordo['Linf'][1]-coordo['C7'][1])
-                    elif 'Tinf' in coordo.keys():
-                        a = (coordo['Tinf'][0]-coordo['C7'][0])/(coordo['Tinf'][1]-coordo['C7'][1])
-                    b = coordo['C7'][0] - a*coordo['C7'][1]
-                    x1 = coordo['ScG'][0]
-                    x2 = (a*coordo['ScG'][1])+b
-                    d1 = abs(x1 - x2) #distance entre G et l'axe de la colonne
-                    x3 = coordo['ScD'][0]
-                    x4 = a*coordo['ScD'][1]+b
-                    d2 = abs(x3 - x4) #distance entre D et l'axe de la colonne
-                    diff_d1d2 = abs(d1 - d2)
-                    dict_metriques['diff_dg'].append(diff_d1d2)
-
-                if nb_marqueurs in [5,6]:
-                    dict_metriques.update(self.analyse_5())
-                if nb_marqueurs in [8,9,10]:
-                    dict_metriques.update(self.analyse_8())
-
-                print(dict_metriques)
-
-                # Recherche des metriques optimales (et images associées)
-                global min_metriques
-                min_metriques = {}
-                for key, vals in dict_metriques.items():
-                    min = np.nanmin(np.absolute(vals))
-                    if min in vals:
-                        min_metriques.update({key: [vals.index(min), min]})
-                    else:
-                        min_metriques.update({key: [vals.index(-min), -min]})
-
-                # Crée le graphique et l'affiche sur l'interface
-                self.graph_analyze()
-                self.ids.graph.add_widget(FigureCanvasKivyAgg(plt.gcf()))
-                plt.close()
-                
-                global max_sym_im
-                max_sym_im, max_sym = self.max_symmetry()
-                print(max_sym_im, max_sym)
-
-        if self.ids.button_analyze.state == 'normal':
-            self.ids.graph.clear_widgets()
-
-        self.show_image()
-
-        self.ids.button_distances.disabled = False
-        self.ids.button_profondeur.disabled = False
-
-        timer_fin_analyse = time.process_time_ns()
-        print(timer_debut_analyse, timer_fin_analyse)
-        print(f'Temps calcul des métriques + graphiques :{timer_fin_analyse - timer_debut_analyse} ns')
-
-
-    # Calcule des métriques pour 5 marqueurs
-    def analyse_5(self):
-        dict_metriques = {'angle_rachis': [], 'var_rachis': []}
-        # Calcul des métriques d'analyse et ajout au dictionnaire de métriques
-        for im, coordo in dict_coordo_xyz_labels_r.items():
-            rachis_x = np.degrees(np.arctan((coordo['Tinf'][0] - coordo['C7'][0])/(coordo['Tinf'][1] - coordo['C7'][1])))
-            dict_metriques['angle_rachis'].append(rachis_x)
-            try:
-                rachis_h = [coordo['Tinf'][0], coordo['Tap'][0], coordo['Tsup'][0]] #positions horizontales
-            except KeyError:
-                try:
-                    rachis_h = [coordo['L'][0], coordo['T1'][0], coordo['T2'][0], coordo['C'][0]]
-                except KeyError:
-                    rachis_h = [np.nan, np.nan, np.nan]
-
-            var_rachis = np.std(rachis_h)/abs(np.mean(rachis_h)) #devrait être nulle pour un alignement parfait
-            dict_metriques['var_rachis'].append(var_rachis)
-
-        return dict_metriques
-
-    # Calcule des métriques pour 8 marqueurs
-    def analyse_8(self):
-        dict_metriques = {'dejettement': [], 'scoliosis': []}
-        for im, coordo in dict_coordo_xyz_labels_r.items():
-            dejet = (coordo['ID'][0]+coordo['IG'][0])/2 - coordo['C7'][0]
-            dict_metriques['dejettement'].append(dejet)
-            
-            a = np.sqrt((coordo['Tsup'][0]-coordo['Tap'][0])**2+(coordo['Tsup'][1]-coordo['Tap'][1])**2)
-            b = np.sqrt((coordo['Tap'][0]-coordo['Tinf'][0])**2+(coordo['Tap'][1]-coordo['Tinf'][1])**2)
-            c = np.sqrt((coordo['Tsup'][0]-coordo['Tinf'][0])**2+(coordo['Tsup'][1]-coordo['Tinf'][1])**2)
-            scoliosis_angle = 180 - np.degrees(np.arccos((a**2+b**2-c**2)/(2*a*b)))
-            dict_metriques['scoliosis'].append(scoliosis_angle)
-        
-        return dict_metriques
-
-    # Calcule le score d'une métrique pour une image selon toutes les métriques de cette catégorie
-    def map_metriques(self, m, metriques):
-        pond = 50*(1 - abs(m)/np.max(np.absolute(metriques)))
-        return pond
-    
-    # Calcule le score global de chaque image et trouve le maximum de symétrie atteint (score et #image)
-    def max_symmetry(self):
-        dict_metriques.update({'scores': np.zeros(images_total)})
-        for metriques in [dict_metriques['scoliosis'], dict_metriques['dejettement']]:
-            for i in range(len(metriques)):
-                m = metriques[i]
-                pond = self.map_metriques(m, metriques)
-                dict_metriques['scores'][i] += pond
-        max_sym = np.max(dict_metriques['scores'])
-        max_sym_im = np.argmax(dict_metriques['scores'])+1
-
-        self.ids.im_best.text = f'Image no {max_sym_im}'
-        self.ids.sym_best.text = f'Score : {max_sym:.2f} %'
-
-        return max_sym_im, max_sym
-
-    def graph_analyze(self):
-        global dict_metriques
-        # Graphiques des metriques calculées selon l'image
-        xaxis = range(1, images_total+1)
-        fig, ([ax1, ax2], [ax3, ax4]) = plt.subplots(2,2)
-
-        ax1.plot(xaxis, dict_metriques['angle_scap_vert'], label='Hauteur')
-        ax1.scatter(min_metriques['angle_scap_vert'][0]+1, min_metriques['angle_scap_vert'][1], marker='*', c='r')
-        ax1.plot(xaxis, dict_metriques['angle_scap_prof'], label='Profondeur')
-        ax1.scatter(min_metriques['angle_scap_prof'][0]+1, min_metriques['angle_scap_prof'][1], marker='*', c='g')
-        ax1.legend(fontsize=7)
-        ax1.set_title("Angles entre les scapulas", fontsize=9)
-        ax1.set_ylabel('Angle (degrés)', fontsize=9)
-
-        ax2.plot(xaxis, dict_metriques['diff_dg'])
-        ax2.scatter(min_metriques['diff_dg'][0]+1, min_metriques['diff_dg'][1], marker='*', c='r')
-        ax2.set_title("|Distance rachis-G - Distance rachis-D|", fontsize=9)
-        ax2.set_ylabel('Distance (mm)', fontsize=9)
-
-        if nb_marqueurs in [5,6]:
-            metrique_3 = 'angle_rachis'
-            metrique_4 = 'var_rachis'
-            ax3.set_title("Angle entre l'axe du rachis et la verticale", fontsize=9)
-            ax3.set_ylabel('Angle (degrés)', fontsize=9)
-            ax4.set_title('Écart-type (C, T, L) / Moyenne en x', fontsize=9)
-            ax4.set_ylabel('Variabilité', fontsize=9)
-        
-        elif nb_marqueurs in[8,9,10]:
-            metrique_3 = 'dejettement'
-            metrique_4 = 'scoliosis'
-            ax3.set_title('Déjettement (> 0 = gauche | < 0 = droit)', fontsize=9)
-            ax3.set_ylabel('Distance (mm)', fontsize=9)
-            ax4.set_title('Angle de scoliose', fontsize=9)
-            ax4.set_ylabel('180 - Angle (degrés)', fontsize=9)
-
-        ax3.plot(xaxis, dict_metriques[metrique_3])
-        ax3.scatter(min_metriques[metrique_3][0]+1, min_metriques[metrique_3][1], marker='*', c='r')
-        ax3.set_xlabel("Numéro de l'image", fontsize=9)
-        
-        ax4.plot(xaxis, dict_metriques[metrique_4])
-        ax4.scatter(min_metriques[metrique_4][0]+1, min_metriques[metrique_4][1], marker='*', c='r')
-        ax4.set_xlabel("Numéro de l'image", fontsize=9)
-        
-        path_pt = path[:(path.find('Participant')+14)]
-        print(path_pt)
-
-        corrections = {}
-        if self.ids.check_corrected.state == 'down':
-            #corrections.update({'Droit 1' : (os.path.join(path_pt, 'Corrected/Prise01/Metriques/metriques.csv'))})
-            corrections.update({'Droit 2' : (os.path.join(path_pt, 'Corrected/Prise02/Metriques/metriques.csv'))})
-        if self.ids.check_max.state == 'down':
-            #corrections.update({'Max 1' : (os.path.join(path_pt, 'Maximum/Prise01/Metriques/metriques.csv'))})
-            corrections.update({'Max 2' : (os.path.join(path_pt, 'Maximum/Prise02/Metriques/metriques.csv'))})
-        if self.ids.check_min.state == 'down':
-            #corrections.update({'Min 1' : (os.path.join(path_pt, 'Minimum/Prise01/Metriques/metriques.csv'))})
-            corrections.update({'Min 2' : (os.path.join(path_pt, 'Minimum/Prise02/Metriques/metriques.csv'))})
-        
-        colors = ['tab:red', 'tab:green', 'k', 'tab:purple', 'c', 'tab:gray', 'tab:pink']
-        for (type_cor, path_cor), col in zip(corrections.items(), colors):
-            try:
-                with open(path_cor, 'r') as csvfile:
-                            reader = csv.reader(csvfile, delimiter=';')
-                            j = 0
-                            for row in reader: #skip headline
-                                if j == 0:
-                                    entete = row[1:-1]
-                                    for e in entete:
-                                        dict_metriques.update({e: []})
-                                elif j > 0:
-                                    for m, e in zip(row[1:-1], dict_metriques.keys()):
-                                        dict_metriques[e].append(float(m))
-                                j += 1
-                print(dict_metriques)
-                moy_metriques = {}
-
-                for metrique, valeurs in dict_metriques.items():
-                    moy_metriques.update({metrique : np.mean(valeurs)})
-                ax1.axhline(moy_metriques['angle_scap_vert'], label=type_cor, color=col)
-                ax1.axhline(moy_metriques['angle_scap_prof'], label=type_cor, color=col)
-                ax1.legend()
-                ax2.axhline(moy_metriques['diff_dg'], label=type_cor, color=col)
-                ax2.legend()
-                ax3.axhline(moy_metriques['dejettement'], label=type_cor, color=col)
-                ax3.legend()
-                ax4.axhline(moy_metriques['scoliosis'], label=type_cor, color=col)
-                ax4.legend()
-            except FileNotFoundError:
-                continue
-
-        plt.tight_layout()
-    
-    # Définir le numéro du gold frame (par défaut, meilleure symétrie, sinon input)
-    def gold_nb_input(self):
-        global gold_nb
-        txt = self.ids.input_gold_nb.text
-        if len(txt) > 0 and 0 < int(txt) < images_total:
-            gold_nb = int(self.ids.input_gold_nb.text)
-            self.ids.im_best.color = (1,0,0,1)
-        else:
-            gold_nb = max_sym_im
-            self.ids.im_best.color = (1,1,1,1)
-        
-        self.erase_distances()
-        self.show_distances()
-    
-    # Calculer les distances des marqueurs de chaque frame au gold frame
-    def distance_to_gold(self):
-        global gold_nb
-        global max_sym_im
-
-        try:
-            if not type(gold_nb) == int:
-                gold_nb = max_sym_im
-        except NameError:
-            gold_nb = max_sym_im
-
-        global distances
-        distances = {}
-        self.rotate_markers()
-
-        for im, coordos in dict_coordo_xyz_labels_r.items():
-            distances.update({im:{}})
-            for l, c in coordos.items():
-                dist_pelvis = ((np.asarray(dict_coordo_xyz_labels_r[f'image{gold_nb}']['IG']) - np.asarray(coordos['IG'])) + (np.asarray(dict_coordo_xyz_labels_r[f'image{gold_nb}']['ID']) - np.asarray(coordos['ID']))) /2
-                distances[im].update({l: np.asarray(dict_coordo_xyz_labels_r[f'image{gold_nb}'][l]) - np.asarray(c) - dist_pelvis})
-
-
-        return distances, labels
-    
-    # Afficher les marqueurs du gold frame
-    def show_marqueurs_gold(self):
-        if self.ids.check_corrected.state == 'normal' and self.ids.check_min.state == 'normal' and self.ids.check_max.state == 'normal':
-            gold_coordos = dict_coordo_labels_manual[f'image{gold_nb}']
-            coordinates = dict_coordo[f'image{gold_nb}']
-
-        pelvis_x_gold = (gold_coordos['IG'][0] + gold_coordos['ID'][0]) /2
-        pelvis_y_gold = (gold_coordos['IG'][1] + gold_coordos['ID'][1]) /2
-        pelvis_x_act = (dict_coordo_labels_manual[f'image{image_nb}']['IG'][0] + dict_coordo_labels_manual[f'image{image_nb}']['ID'][0]) /2
-        pelvis_y_act = (dict_coordo_labels_manual[f'image{image_nb}']['IG'][1] + dict_coordo_labels_manual[f'image{image_nb}']['ID'][1]) /2
-        
-        global gold_coordo
-        gold_coordo = []
-
-        print(coordinates)
-
-        for c in coordinates:
-            x = c[0] - pelvis_x_gold + pelvis_x_act
-            y = c[1] - pelvis_y_gold + pelvis_y_act
-            gold_coordo.append([x, y])
-            pos_x = self.width*(x/im_dim[1]*(self.ids.image_show.width/self.width) + 0.025)
-            pos_y = self.height*(0.85 - y/im_dim[0]*0.78)
-            with self.canvas:
-                Color(245/255,168/255,2/255,1)
-                Line(circle=(pos_x, pos_y,6,0,360), width=1.1, group=u"circle_gold") #(center_x, center_y, radius, angle_start, angle_end, segments)
-
-    # Affiche ou efface les distances selon l'état du bouton
-    def toggle_distances(self):
-        if self.ids.button_distances.state == 'down':
-            self.show_distances()
-        elif self.ids.button_distances.state == 'normal':
-            self.erase_distances()
-
-    # Afficher les distances sur l'image actuelle, une fois l'analyse effectuée
-    def show_distances(self):
-        distances, labels = self.distance_to_gold()
-        print(distances)
-        self.show_marqueurs_gold()
-
-        self.ids.xyz_axis.size_hint = (.05, .09)
-        self.ids.xyz_axis.source = 'xyz_axis.png'
-        dist_act = {}
-        for l in labels:
-            dist_act.update({l: distances[f'image{image_nb}'][l]})
-
-        self.Distances = Widget()
-        for l in labels:
-            coordinates = dict_coordo_labels_manual[f'image{gold_nb}'][l]
-            x = (coordinates[0]/im_dim[1])*(self.ids.image_show.width/self.width) + 0.025
-            y = 0.85 - (coordinates[1]/im_dim[0])*0.78
-            xyz = [round(dist_act[l][0]), round(dist_act[l][1]), round(dist_act[l][2])]
-            xyz_plus = [f'+{dist}' if dist > 0 else str(dist) for dist in xyz]
-            self.dist_txt = Label(text=f'{l} (X, Y, Z)\n({xyz_plus[0]}, {xyz_plus[1]}, {xyz_plus[2]})',
-                                fontsize='10sp', color=(1,1,1,1), size_hint=(.15, .15), pos=(self.width*x+20, self.height*y-30))
-            self.Distances.add_widget(self.dist_txt)
-
-        self.add_widget(self.Distances)
-
-    # efface annotations précécentes (surtout utile si changement du gold_nb)
-    def erase_distances(self):
-        self.remove_widget(self.Distances)
-        self.canvas.remove_group(u"circle_gold")
-    
-    def rotate_markers(self):
-        dict_coordo_xyz_rotated = {}
-
-        ID = dict_coordo_xyz_labels['image1']['ID']
-        IG = dict_coordo_xyz_labels['image1']['IG']
-        print(f'ID : {ID}, IG : {IG}')
-        pelvis = ((IG[0]+ID[0])/2, (IG[1]+ID[1])/2, (IG[2]+ID[2])/2)
-        rz = (math.atan((ID[1] - pelvis[1])/(ID[0] - pelvis[0])) + math.atan((pelvis[1] - IG[1])/(pelvis[0] - IG[0]))) /2
-        rx = (math.atan((ID[2] - pelvis[2])/(ID[0] - pelvis[0])) + math.atan((pelvis[2] - IG[2])/(pelvis[0] - IG[0]))) /2
-
-        for i in range(images_total):
-            markers_r = o3d.geometry.PointCloud()
-            markers_points = dict_coordo_xyz_labels[f'image{i+1}'].values()
-            markers_r.points = o3d.utility.Vector3dVector(markers_points)
-
-            global matrix_R
-            matrix_R = markers_r.get_rotation_matrix_from_xyz((0, rx, -rz))
-            markers_r.rotate(matrix_R, center=pelvis)
-            dict_coordo_xyz_rotated.update({f'image{i+1}': np.asarray(markers_r.points)})
-        
-        global dict_coordo_xyz_labels_r
-        dict_coordo_xyz_labels_r = {}
-        
-        for i, (coordo, coordo_r) in enumerate(zip(dict_coordo_xyz_labels.values(), dict_coordo_xyz_rotated.values())):
-            for l in coordo.keys():
-                dist = []
-                c = coordo[l]
-                for cr in coordo_r:
-                    dist.append(np.sqrt((c[0]-cr[0])**2+(c[1]-cr[1])**2+(c[2]-cr[2])**2))
-                ind = dist.index(min(dist))
-                if f'image{i+1}' not in dict_coordo_xyz_labels_r:
-                    dict_coordo_xyz_labels_r.update({f'image{i+1}': {l : list(coordo_r[ind])}})
-                else:
-                    dict_coordo_xyz_labels_r[f'image{i+1}'].update({l : list(coordo_r[ind])})
-
-        print(dict_coordo_xyz_labels_r)
-        global markers_rotated
-        markers_rotated = True
-
-    def equalize_histogram(self, img, max, w):
-        # Calcul de la transformation
-        counts, bins = np.histogram(img, bins=max+1, range=(0,max-1))
-        T = 1/(np.count_nonzero(w))*np.cumsum(counts)
-
-        img_eq = max*np.ones((img.shape))
-        img_eq[w]=(max-50)*T[img[w]]
-        
-        return img_eq
-    
-    def white_in_cmp(self, cmap, pos, len):
-        cmap_initial = cm[cmap]
-        newcolors = cmap_initial(np.linspace(0,1,len))
-        newcolors[pos, :] = np.array([1,1,1,1])
-        newcmp = ListedColormap(newcolors)
-        return newcmp
-
-    def show_profondeur(self):
-        if len(os.listdir(save_path_depth)) == 0 or self.ids.check_new.state == 'down':
-            for file in os.listdir(save_path_xyz):
-                xyz = np.load(os.path.join(save_path_xyz, file))
-                xyz_r = linalg.matmul(xyz, matrix_R)
-                xyz_r = np.asarray(xyz_r)
-                
-                z = xyz_r[:,:,2][h1:h2, w1:w2]
-                z = z.astype(int)
-                z = median_filter(z, 5)
-                z[z == 0] = np.max(z) + 50 #convert background at 0 to deepest
-                
-                weights = np.ones((z.shape))
-                weights[z > np.median(z)+250] = 0
-                weights = weights.astype(bool)
-
-                z_eq = self.equalize_histogram(z, np.max(z), weights)
-                
-                fig, ax = plt.subplots(1,1, figsize=(6, 7.2))
-                plt.imshow(z_eq, cmap = self.white_in_cmp('magma', -1, int(np.max(z_eq))))
-                plt.subplots_adjust(left = 0, right = 1, top = 1, bottom = 0)
-                plt.axis('off')
-
-                cbaxes = inset_axes(ax, width="3%", height="30%", loc='upper right', bbox_to_anchor=(0, 0, .9, 1), bbox_transform=ax.transAxes)
-                plt.colorbar(cax=cbaxes)
-
-                plt.savefig(save_path_depth + file[:-4] + '_z.png')
-                plt.close()
-
-        if self.ids.button_profondeur.state == 'down':
-            self.ids.image_show.source = os.path.join(save_path_depth, os.listdir(save_path_depth)[image_nb-1])
-
 
     # Sauvegarder les informations souhaitées selon ce qui est coché
     def to_save(self):
         timer_debut_save = time.process_time_ns()
       
-        if self.ids.save_positions.state == 'down':
-            if not 'landmarks' in os.listdir(path):
-                os.mkdir(path+'/landmarks', )
-            if not 'Positions' in os.listdir(path):
-                os.mkdir(path+'/Positions', )
-            if not 'annotated_frames' in os.listdir(path):
-                os.mkdir(path+'/annotated_frames', )
-            self.save_positions()
-            
-        if analyse_eff == True:
-            if self.ids.save_metriques.state == 'down':
-                if not 'Metriques' in os.listdir(path):
-                    os.mkdir(path+'/Metriques', )
-                if not 'Positions' in os.listdir(path):
-                    os.mkdir(path+'/Positions', )
-                self.save_metriques()
-            if self.ids.save_graph.state == 'down':
-                if not 'Metriques' in os.listdir(path):
-                    os.mkdir(path+'/Metriques', )
-                self.save_graph_analyze()
-        else:
-            pass
+        if not 'Positions' in os.listdir(path):
+            os.mkdir(path+'/Positions', )
+        if not 'annotated_frames' in os.listdir(path):
+            os.mkdir(path+'/annotated_frames', )
+        self.save_positions()
+
         timer_fin_save = time.process_time_ns()
         print(timer_debut_save, timer_fin_save)
         print(f'Temps sauvegarde :{timer_fin_save - timer_debut_save} ns')
@@ -1294,41 +825,6 @@ class MyApp(Widget):
                 annotated_file = f"annotated_frame_{i:04d}.jpg"
                 frame_with_key_points = cv2.drawKeypoints(preprocessed_frame, key_points, None, color=(0, 255, 0))
                 cv2.imwrite(os.path.join(annotated_frames_path, annotated_file), frame_with_key_points)
-
-
-        if coordo_xyz:
-            with open(save_pos+'/coordonnees_xyz_r.csv', 'w', newline='') as csvfile:
-                writer = csv.writer(csvfile, delimiter=';')
-                entete = ['image no']
-                for l in dict_coordo_xyz_labels_r['image1'].keys():
-                    entete += [f'{l} x', f'{l} y', f'{l} z']
-                writer.writerow(entete)
-                for im, coordos in dict_coordo_xyz_labels_r.items():
-                    row = [im[5:]]
-                    for l in dict_coordo_xyz_labels_r['image1'].keys():
-                        row += [coordos[l][0], coordos[l][1], coordos[l][2]]
-                    writer.writerow(row)
-            with open(save_pos+'/positions_xyzr.json', 'w') as positions:
-                json.dump(dict_coordo_xyz_labels_r, positions)
-    
-    # Crée un csv et y écrit les métriques et le score global pour chaque image
-    def save_metriques(self):
-        save_met = path+'/Metriques/metriques.csv'
-        with open(save_met, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter=';')
-            writer.writerow(['image no'] + list(dict_metriques.keys()))
-            for i in range(images_total):
-                row = [i+1]
-                for metrique in dict_metriques.values():
-                    row.append(metrique[i])
-                writer.writerow(row)
-                i += 1
-    
-    # Enregistre le graphique des métriques sous format png
-    def save_graph_analyze(self):
-        self.graph_analyze()
-        plt.savefig(path+'/Metriques/graph_analyze.png')
-        plt.close()
 
         
 class Interface(App):

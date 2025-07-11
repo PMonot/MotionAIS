@@ -110,11 +110,6 @@
                 text:"Afficher les\nmarqueurs"
                 on_press: root.press_color()
                 on_press: root.show_marqueurs()
-            # ToggleButton:
-            #     id: button_tapir
-            #     text:"TAPIR"
-            #     on_press: root.press_color()
-            #     on_press: root.tapir()
             ToggleButton:
                 id: labelize_manual
                 text:"Activer la\nlabellisation manuelle"
@@ -162,26 +157,6 @@
                 disabled: True
                 on_press: root.press_color()
                 on_press: root.graph_continuity()
-            ToggleButton:
-                id: button_analyze
-                text: "Confirmer et\nlancer l'analyse"
-                group: 'graph'
-                disabled: True
-                on_press: root.press_color()
-                on_press: root.analyse()
-            ToggleButton:
-                id: button_distances
-                text: "Afficher les distances\nentre marqueurs"
-                disabled: True
-                on_press: root.press_color()
-                on_press: root.toggle_distances()
-            ToggleButton:
-                id: button_profondeur
-                text: "Afficher les cartes\nde profondeur"
-                disabled: True
-                on_press: root.press_color()
-                on_press: root.rotate_markers()
-                on_press: root.show_profondeur()
         GridLayout:
             pos_hint:{'x':.38, 'top':.29}
             size_hint:{.14, .08}
@@ -308,39 +283,6 @@
             size_hint: (.47, .6)
             pos_hint: {'x':.53, 'top':.6}
             allow_strecth: True
-        Label:
-            text:'Infos à sauvegarder :'
-            fontsize: 18
-            halign: 'left'
-            size_hint: (.14, .03)
-            pos_hint: {'x':.84, 'top':.99}
-        Label:
-            text:'Positions corrigées'
-            fontsize: 15
-            size_hint: (.11, .03)
-            pos_hint: {'x':.84, 'top':.95}
-        Label:
-            text:'Métriques de symétrie'
-            fontsize: 15
-            size_hint: (.11, .03)
-            pos_hint: {'x':.84, 'top':.92}
-        Label:
-            text:'Graphiques des métriques'
-            fontsize: 15
-            size_hint: (.11, .03)
-            pos_hint: {'x':.84, 'top':.89}
-        CheckBox:
-            id:save_positions
-            pos_hint: {'x':.96, 'top':.95}
-            size_hint: (.03, .03)
-        CheckBox:
-            id:save_metriques
-            pos_hint: {'x':.96, 'top':.92}
-            size_hint: (.03, .03)
-        CheckBox:
-            id:save_graph
-            pos_hint: {'x':.96, 'top':.89}
-            size_hint: (.03, .03)
         Button:
             id:save
             text:'Sauvegarder'
@@ -350,78 +292,7 @@
             background_color:(24/255.0, 192/255.0, 214/255.0, 1)
             on_press: root.press_color()
             on_press: root.to_save()
-        Label:
-            text: 'Meilleure symétrie'
-            fontsize: 15
-            halign:'left'
-            color: (223/255.0, 2/255.0, 235/255.0, 1)
-            pos_hint:{'x':.37, 'top':.2}
-            size_hint:(.08, .02)
-        Label:
-            id:im_best
-            text: 'Image no'
-            fontsize: 15
-            halign:'left'
-            pos_hint:{'x':.37, 'top':.17}
-            size_hint:(.05, .02)
-        TextInput:
-            id:input_gold_nb
-            multiline: False
-            text: ''
-            font_size: 15
-            size_hint: (.02, .03)
-            pos_hint:{'x':.42, 'top':.175}
-            on_text_validate: root.gold_nb_input()
-        Label:
-            id:sym_best
-            text: 'Score :'
-            fontsize: 15
-            halign:'left'
-            pos_hint:{'x':.37, 'top':.14}
-            size_hint:(.06, .02)
-        Label:
-            text: 'Correction visée :'
-            fontsize: 15
-            pos_hint:{'x':.46, 'top':.2}
-            size_hint:(.05, .02)
-        Label:
-            text: 'Droite'
-            fontsize: 12
-            pos_hint:{'x':.45, 'top':.18}
-            size_hint:(.05, .02)
-        Label:
-            text: 'Minimale'
-            fontsize: 12
-            pos_hint:{'x':.45, 'top':.16}
-            size_hint:(.05, .02)
-        Label:
-            text: 'Maximale'
-            fontsize: 12
-            pos_hint:{'x':.45, 'top':.14}
-            size_hint:(.05, .02)
-        CheckBox:
-            id: check_corrected
-            pos_hint: {'x':.5, 'top':.18}
-            size_hint: (.02, .02)
-        CheckBox:
-            id: check_min
-            pos_hint: {'x':.5, 'top':.16}
-            size_hint: (.02, .02)
-        CheckBox:
-            id: check_max
-            pos_hint: {'x':.5, 'top':.14}
-            size_hint: (.02, .02)
-        # ToggleButton:
-        #     id: button_correction
-        #     text: 'Afficher corrections'
-        #     group: 'graph'
-        #     pos_hint: {'x':.43, 'top':.10}
-        #     size_hint: (.09, .03)
-        #     on_press: root.press_color()
-        #     on_press: root.show_correction_gold()
             
-
-
 <Touch>:
     BoxLayout:
         size_hint: ((702/1960), .78)
